@@ -47,12 +47,33 @@ public class TransactionService {
         AppUser user = appUserRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        // Set default values for manual entry
         transaction.setUser(user);
-        transaction.setType(TransactionType.EXPENSE); // Default to EXPENSE
-        transaction.setIsAiCategorized(false); // Not categorized by AI yet
+        transaction.setType(TransactionType.EXPENSE);
+        transaction.setIsAiCategorized(false);
 
         return transactionRepository.save(transaction);
+    }
+
+    @Transactional
+    public Transaction updateTransaction(String userEmail, UUID transactionId, Transaction updatedTransaction) {
+        AppUser user = appUserRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Transaction existingTransaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+        if (!existingTransaction.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized to update this transaction");
+        }
+
+        existingTransaction.setRawDescription(updatedTransaction.getRawDescription());
+        existingTransaction.setAmount(updatedTransaction.getAmount());
+        existingTransaction.setTransactionDate(updatedTransaction.getTransactionDate());
+        
+        existingTransaction.setCategory(null);
+        existingTransaction.setIsAiCategorized(false);
+
+        return transactionRepository.save(existingTransaction);
     }
 
     @Transactional
@@ -66,14 +87,12 @@ public class TransactionService {
              CSVReader csvReader = new CSVReader(reader)) {
 
             String[] line;
-            // Skip header if it exists
-            csvReader.readNext();
+            csvReader.readNext(); // Skip header
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
             while ((line = csvReader.readNext()) != null) {
                 try {
-                    // Assuming CSV format: Date, Description, Amount, Type
                     Date date = dateFormat.parse(line[0]);
                     String description = line[1];
                     BigDecimal amount = new BigDecimal(line[2]);
@@ -85,14 +104,13 @@ public class TransactionService {
                             .rawDescription(description)
                             .amount(amount)
                             .type(type)
-                            .isAiCategorized(false) // Ready for the AI job
+                            .isAiCategorized(false)
                             .build();
 
                     savedTransactions.add(t);
 
                 } catch (ParseException | IllegalArgumentException e) {
                     log.error("Failed to parse CSV row: {}", String.join(",", line), e);
-                    // Decide whether to fail the whole batch or skip the row
                 }
             }
 

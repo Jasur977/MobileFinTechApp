@@ -6,14 +6,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../api/api';
+import { RootStackParamList } from '../navigation/AppNavigator';
 
-// Navigation and data types
-export type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Dashboard: undefined;
-  AddTransaction: undefined;
-};
+type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
 interface Transaction {
   id: string;
@@ -21,9 +16,8 @@ interface Transaction {
   amount: number;
   transactionDate: string;
   type: 'INCOME' | 'EXPENSE';
+  category: string | null;
 }
-
-type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
 const DashboardScreen = ({ navigation }: Props) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -34,7 +28,6 @@ const DashboardScreen = ({ navigation }: Props) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch transactions and balance in parallel
       const [transactionsResponse, balanceResponse] = await Promise.all([
         api.get<Transaction[]>('/transactions'),
         api.get<{ balance: number }>('/transactions/balance'),
@@ -70,7 +63,7 @@ const DashboardScreen = ({ navigation }: Props) => {
       setLoading(true);
       await api.post('/transactions/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       Alert.alert('Success', 'CSV uploaded successfully.');
-      fetchData(); // Refresh all data
+      fetchData();
     } catch (err) {
       console.error('CSV Upload Error:', err);
       Alert.alert('Error', 'Failed to upload CSV.');
@@ -85,12 +78,16 @@ const DashboardScreen = ({ navigation }: Props) => {
       { text: "Delete", onPress: async () => {
           try {
             await api.delete(`/transactions/${transactionId}`);
-            fetchData(); // Refresh all data
+            fetchData();
           } catch (err) {
             Alert.alert("Error", "Failed to delete transaction.");
           }
         }, style: "destructive" },
     ]);
+  };
+  
+  const handleEdit = (transaction: Transaction) => {
+    navigation.navigate('EditTransaction', { transaction });
   };
 
   const handleLogout = async () => {
@@ -102,14 +99,24 @@ const DashboardScreen = ({ navigation }: Props) => {
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <Text style={styles.description}>{item.rawDescription}</Text>
-        <Text style={styles.date}>{new Date(item.transactionDate).toLocaleDateString()}</Text>
+        <View style={styles.row}>
+          <Text style={styles.date}>{new Date(item.transactionDate).toLocaleDateString()}</Text>
+          {item.category && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
+          )}
+        </View>
       </View>
       <View style={styles.cardRight}>
         <Text style={[styles.amount, item.type === 'INCOME' ? styles.income : styles.expense]}>
           {item.type === 'INCOME' ? '+' : '-'}${item.amount.toFixed(2)}
         </Text>
-        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-          <MaterialIcons name="delete-outline" size={24} color="#E53935" />
+        <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
+          <MaterialIcons name="edit" size={22} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
+          <MaterialIcons name="delete-outline" size={22} color="#E53935" />
         </TouchableOpacity>
       </View>
     </View>
@@ -158,34 +165,22 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 40, paddingBottom: 10, backgroundColor: '#FFFFFF' },
   title: { fontSize: 28, fontWeight: 'bold' },
   headerButtons: { flexDirection: 'row' },
-  balanceCard: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    padding: 20,
-    marginVertical: 10,
-    alignItems: 'center',
-    elevation: 3,
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    opacity: 0.8,
-  },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
+  balanceCard: { backgroundColor: '#007AFF', borderRadius: 12, padding: 20, marginVertical: 10, alignItems: 'center', elevation: 3 },
+  balanceLabel: { fontSize: 16, color: '#FFFFFF', opacity: 0.8 },
+  balanceAmount: { fontSize: 36, fontWeight: 'bold', color: '#FFFFFF' },
   listContent: { paddingHorizontal: 15, paddingBottom: 80 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 15, marginVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1.41 },
   cardContent: { flex: 1 },
   cardRight: { flexDirection: 'row', alignItems: 'center' },
-  description: { fontSize: 16, fontWeight: '500' },
-  date: { fontSize: 12, color: '#666', marginTop: 4 },
-  amount: { fontSize: 16, fontWeight: 'bold', marginRight: 15 },
+  description: { fontSize: 16, fontWeight: '500', marginBottom: 5 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  date: { fontSize: 12, color: '#666' },
+  categoryBadge: { backgroundColor: '#E0E0E0', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginLeft: 10 },
+  categoryText: { fontSize: 10, color: '#333', fontWeight: '500' },
+  amount: { fontSize: 16, fontWeight: 'bold', marginRight: 10 },
   income: { color: '#2E7D32' },
   expense: { color: '#C62828' },
-  deleteButton: { padding: 5 },
+  actionButton: { padding: 5, marginLeft: 5 },
   error: { color: 'red', textAlign: 'center', marginTop: 20 },
   emptyText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: '#888' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#F4F6F8' }

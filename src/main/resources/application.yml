@@ -17,7 +17,9 @@ jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
   expiration: 86400000 # 24 hours in milliseconds
 
+# Configuration for local Ollama API
 ai:
-  llm:
-    api-key: ${OPENAI_API_KEY:your-default-dev-key}
-    url: https://api.openai.com/v1/chat/completions
+  ollama:
+    url: http://localhost:11434/api/generate
+    model: llama3 # Default model, can be changed
+    # No API key needed for local Ollama

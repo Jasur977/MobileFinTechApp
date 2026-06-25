@@ -53,6 +53,7 @@ public class Transaction {
     @Column(nullable = false)
     private TransactionType type;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean isAiCategorized = false;
 }

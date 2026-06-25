@@ -1,105 +1,82 @@
 package org.example.service;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.example.entity.AppUser;
-import org.example.entity.Transaction;
-import org.example.repository.AppUserRepository;
-import org.example.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AiCategorizationService {
 
-    private final TransactionRepository transactionRepository;
-    private final AppUserRepository appUserRepository;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
-    @Value("${ai.llm.api-key}")
-    private String apiKey;
+    @Value("${ai.ollama.url}")
+    private String ollamaUrl;
 
-    @Value("${ai.llm.url}")
-    private String apiUrl;
+    @Value("${ai.ollama.model}")
+    private String ollamaModel;
 
-    private final WebClient webClient = WebClient.builder().build();
+    private static final List<String> CATEGORIES = List.of(
+            "Groceries", "Dining", "Transport", "Utilities", "Rent",
+            "Shopping", "Entertainment", "Health", "Travel", "Income", "Other"
+    );
 
-    @Transactional
-    public void categorizeUncategorizedTransactions(String userEmail) {
-        AppUser user = appUserRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        List<Transaction> pendingTransactions = transactionRepository.findByUserIdAndIsAiCategorizedFalse(user.getId());
-
-        if (pendingTransactions.isEmpty()) {
-            log.info("No uncategorized transactions for user {}", userEmail);
-            return;
-        }
-
-        // In a production app, we would batch these to avoid rate limits and reduce cost.
-        // For demonstration, we'll process them one by one.
-        for (Transaction t : pendingTransactions) {
-            String category = promptLlmForCategory(t.getRawDescription());
-            t.setCategory(category);
-            t.setIsAiCategorized(true);
-        }
-
-        transactionRepository.saveAll(pendingTransactions);
-        log.info("Successfully categorized {} transactions for user {}", pendingTransactions.size(), userEmail);
+    public AiCategorizationService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
     }
 
-    private String promptLlmForCategory(String rawDescription) {
-        // Constructing a lightweight prompt asking the LLM to output a single word category
+    public String categorizeTransaction(String description) {
         String prompt = String.format(
-            "You are a financial categorization AI. " +
-            "Given the transaction description: '%s', categorize it into exactly ONE of these categories: " +
-            "Groceries, Utilities, Entertainment, Dining, Transport, Health, Income, Other. " +
-            "Reply with ONLY the category word.", 
-            rawDescription
+            "Based on the transaction description, choose the single best category from this list: %s. " +
+            "Description: \"%s\". Respond with only the category name, nothing else.",
+            String.join(", ", CATEGORIES),
+            description
         );
 
         try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
             Map<String, Object> requestBody = Map.of(
-                "model", "gpt-3.5-turbo",
-                "messages", List.of(
-                    Map.of("role", "user", "content", prompt)
-                ),
-                "temperature", 0.0,
-                "max_tokens", 10
+                "model", ollamaModel,
+                "prompt", prompt,
+                "stream", false // We want the full response at once
             );
 
-            // Making a non-blocking web request, then blocking to await the result for simplicity in this example
-            Map response = webClient.post()
-                    .uri(apiUrl)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            if (response != null && response.containsKey("choices")) {
-                List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-                if (!choices.isEmpty()) {
-                    Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-                    String category = ((String) message.get("content")).trim();
-                    log.info("Categorized '{}' as '{}'", rawDescription, category);
+            ResponseEntity<String> response = restTemplate.postForEntity(ollamaUrl, entity, String.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                // Ollama's non-streaming response is a series of JSON objects, one per line. We only need the last one.
+                String[] jsonResponses = response.getBody().split("\n");
+                String lastJsonResponse = jsonResponses[jsonResponses.length - 1];
+                
+                Map<String, Object> responseMap = objectMapper.readValue(lastJsonResponse, Map.class);
+                String category = ((String) responseMap.get("response")).trim();
+
+                // Clean up the response in case the model adds quotes
+                category = category.replace("\"", "");
+
+                if (CATEGORIES.contains(category)) {
+                    log.info("Successfully categorized '{}' as '{}' using Ollama.", description, category);
                     return category;
+                } else {
+                    log.warn("Ollama returned an invalid or unexpected category: {}", category);
                 }
             }
+            return "Uncategorized";
         } catch (Exception e) {
-            log.error("Failed to prompt LLM for category. Falling back to 'Other'.", e);
+            log.error("Error calling Ollama API: {}", e.getMessage());
+            return "Uncategorized";
         }
-
-        return "Other"; // Fallback
     }
 }

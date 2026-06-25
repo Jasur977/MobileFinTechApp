@@ -4,12 +4,7 @@ import AuthForm from '../components/AuthForm';
 import api from '../api/api';
 import * as SecureStore from 'expo-secure-store';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Dashboard: undefined;
-};
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -18,6 +13,13 @@ const RegisterScreen = ({ navigation }: Props) => {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (email: string, password: string) => {
+    // Frontend validation
+    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError('Password must be 8+ characters with a number and a symbol.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -27,7 +29,7 @@ const RegisterScreen = ({ navigation }: Props) => {
     } catch (err: any) {
       console.error('Registration Error:', err.response ? err.response.data : err.message);
       if (err.response) {
-        setError(`Registration failed: ${err.response.data.message || 'Server error'}`);
+        setError(err.response.data.message || 'Registration failed: Server error');
       } else if (err.request) {
         setError('Registration failed: No response from server.');
       } else {

@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +22,15 @@ public class AuthenticationService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
+    // Password must be at least 8 characters, with 1 number and 1 symbol.
+    private static final Pattern PASSWORD_PATTERN = 
+            Pattern.compile("^(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,}$");
+
     public AuthenticationResponse register(RegisterRequest request) {
+        if (request.getPassword() == null || !PASSWORD_PATTERN.matcher(request.getPassword()).matches()) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long and contain at least one number and one special character.");
+        }
+
         var user = AppUser.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))

@@ -155,6 +155,9 @@ const DashboardScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileButton}>
+          <MaterialIcons name="account-circle" size={32} color="#007AFF" />
+        </TouchableOpacity>
         <Text style={styles.title}>Dashboard</Text>
         <View style={styles.headerButtons}>
           {!isSelectMode ? (
@@ -187,9 +190,10 @@ const DashboardScreen = ({ navigation }: Props) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F6F8' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 40, paddingBottom: 10, backgroundColor: '#FFFFFF' },
-  title: { fontSize: 28, fontWeight: 'bold' },
-  headerButtons: { flexDirection: 'row' },
+  header: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, paddingTop: 40, paddingBottom: 10, backgroundColor: '#FFFFFF' },
+  profileButton: { position: 'absolute', left: 20, top: 40, zIndex: 1 },
+  title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center' },
+  headerButtons: { position: 'absolute', right: 20, top: 40, flexDirection: 'row' },
   balanceCard: { backgroundColor: '#007AFF', borderRadius: 12, padding: 20, marginVertical: 10, alignItems: 'center', elevation: 3 },
   balanceLabel: { fontSize: 16, color: '#FFFFFF', opacity: 0.8 },
   balanceAmount: { fontSize: 36, fontWeight: 'bold', color: '#FFFFFF' },

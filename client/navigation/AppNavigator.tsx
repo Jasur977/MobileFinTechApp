@@ -6,6 +6,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
 import EditTransactionScreen from '../screens/EditTransactionScreen';
+import ProfileScreen from '../screens/ProfileScreen'; // Import ProfileScreen
 
 // Define the transaction type for navigation params
 interface Transaction {
@@ -22,7 +23,8 @@ export type RootStackParamList = {
   Register: undefined;
   Dashboard: undefined;
   AddTransaction: undefined;
-  EditTransaction: { transaction: Transaction }; // Route expects a transaction object
+  EditTransaction: { transaction: Transaction };
+  Profile: undefined; // Add Profile to the stack
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -43,6 +45,11 @@ const AppNavigator = () => {
           name="EditTransaction" 
           component={EditTransactionScreen} 
           options={{ title: 'Edit Transaction' }}
+        />
+        <Stack.Screen 
+          name="Profile" 
+          component={ProfileScreen} 
+          options={{ title: 'My Profile' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

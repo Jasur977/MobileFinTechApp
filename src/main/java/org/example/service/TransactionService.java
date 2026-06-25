@@ -1,7 +1,6 @@
 package org.example.service;
 
 import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.entity.AppUser;
@@ -104,7 +103,6 @@ public class TransactionService {
                             .rawDescription(description)
                             .amount(amount)
                             .type(type)
-                            .isAiCategorized(false)
                             .build();
 
                     savedTransactions.add(t);
@@ -139,5 +137,13 @@ public class TransactionService {
         }
 
         transactionRepository.delete(transaction);
+    }
+
+    @Transactional
+    public void deleteMultipleTransactions(String userEmail, List<UUID> transactionIds) {
+        AppUser user = appUserRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        transactionRepository.deleteByIdInAndUserId(transactionIds, user.getId());
     }
 }

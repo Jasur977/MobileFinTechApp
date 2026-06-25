@@ -35,7 +35,7 @@ public class TransactionController {
 
     @PostMapping
     public ResponseEntity<Transaction> addTransaction(
-            @RequestBody Transaction transaction, 
+            @RequestBody Transaction transaction,
             Authentication authentication
     ) {
         String userEmail = authentication.getName();
@@ -69,6 +69,16 @@ public class TransactionController {
     ) {
         String userEmail = authentication.getName();
         transactionService.deleteTransaction(userEmail, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteMultipleTransactions(
+            @RequestBody List<UUID> ids,
+            Authentication authentication
+    ) {
+        String userEmail = authentication.getName();
+        transactionService.deleteMultipleTransactions(userEmail, ids);
         return ResponseEntity.noContent().build();
     }
 }

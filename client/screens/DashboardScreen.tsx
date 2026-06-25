@@ -162,8 +162,13 @@ const DashboardScreen = ({ navigation }: Props) => {
         <View style={styles.headerButtons}>
           {!isSelectMode ? (
             <>
+              <Button title="Budgets" onPress={() => navigation.navigate('Budget')} />
+              <View style={{ width: 10 }} />
               <Button title="Select" onPress={toggleSelectMode} />
-              <View style={{ width: 10 }} /><Button title="Upload" onPress={handleUploadCsv} /><View style={{ width: 10 }} /><Button title="Add" onPress={() => navigation.navigate('AddTransaction')} />
+              <View style={{ width: 10 }} />
+              <Button title="Upload" onPress={handleUploadCsv} />
+              <View style={{ width: 10 }} />
+              <Button title="Add" onPress={() => navigation.navigate('AddTransaction')} />
             </>
           ) : (
             <Button title="Cancel" onPress={toggleSelectMode} />

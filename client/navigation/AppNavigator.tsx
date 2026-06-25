@@ -6,9 +6,9 @@ import RegisterScreen from '../screens/RegisterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
 import EditTransactionScreen from '../screens/EditTransactionScreen';
-import ProfileScreen from '../screens/ProfileScreen'; // Import ProfileScreen
+import ProfileScreen from '../screens/ProfileScreen';
+import BudgetScreen from '../screens/BudgetScreen';
 
-// Define the transaction type for navigation params
 interface Transaction {
   id: string;
   rawDescription: string;
@@ -24,7 +24,8 @@ export type RootStackParamList = {
   Dashboard: undefined;
   AddTransaction: undefined;
   EditTransaction: { transaction: Transaction };
-  Profile: undefined; // Add Profile to the stack
+  Profile: undefined;
+  Budget: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,21 +37,10 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }}/>
-        <Stack.Screen 
-          name="AddTransaction" 
-          component={AddTransactionScreen} 
-          options={{ title: 'Add Transaction' }} 
-        />
-        <Stack.Screen 
-          name="EditTransaction" 
-          component={EditTransactionScreen} 
-          options={{ title: 'Edit Transaction' }}
-        />
-        <Stack.Screen 
-          name="Profile" 
-          component={ProfileScreen} 
-          options={{ title: 'My Profile' }}
-        />
+        <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ title: 'Add Transaction' }} />
+        <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ title: 'Edit Transaction' }} />
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+        <Stack.Screen name="Budget" component={BudgetScreen} options={{ title: 'Manage Budgets' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
